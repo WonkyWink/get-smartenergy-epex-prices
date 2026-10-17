@@ -16,8 +16,7 @@ class PowerPrices:
         self.db = db
         self.tbl=tbl
         self.columns=columns
-        self.today_date =dt.date.today()
-        self.current_json = requests.get(url).json()
+
     def __str__(self):
         return f"This object contains data from: {self.url}, in DB: {self.db}, in cable: {self.tbl}, has columns: {self.columns}."
 
@@ -34,32 +33,32 @@ class PowerPrices:
         tomorrow_date = str(dt.date.today() + dt.timedelta(days=1))
         fetched_results = cur.fetchmany(25)
         error_string = []
-        position = [0]
+        error_position = [0]
 
         if day == "today" :
             try:
                 if fetched_results[-25][0][:10] == today_date:
                     error_string.append(f'{today_date} is already in table at 2nd last index')
-                    position+='1'
+                    error_position.append('1')
                 if fetched_results[-1][0][:10] == today_date:
                     error_string.append(f'{today_date} is already in table at last index')
-                    position+='2'
+                    error_position.append('2')
             except AssertionError:
                 con.close()
         if day == "tomorrow":
             try:
                 if fetched_results[-25][0][:10] == tomorrow_date:
                     error_string.append(f'{tomorrow_date} is already in table at 2nd last index')
-                    position+=3
+                    error_position.append('3')
                 if fetched_results[-1][0][:10] == tomorrow_date:
                     error_string.append(f'{tomorrow_date} is already in table at last index')
-                    position+='4'
+                    error_position.append('4')
             except AssertionError:
                 con.close()
             finally:
-                if position != [0]: print(*error_string, sep=" & ")
+                if len(error_position) > 0: print(*error_string, sep=" & ")
                 con.close()
-        if error_string: return True #positions: 1=today in 2nd last,
+        if error_string: return True #positions: 1=today in 2nd last, 2= today in last, 3 yesterday in 2nd last, 4 yesterday in last
         else: return False
 
 
@@ -71,7 +70,7 @@ class PowerPrices:
 
         string = ""
         for entry in table:
-            if entry[0][0:10] == self.today_date:
+            if entry[0][0:10] == dt.date.today():
                 string+= f"date:{entry[0][0:10]}\ntime:{entry[0][11:13]}\nprice:{entry[1]}\n\n"
         if string: return string
         else: return "today data is not in table"
@@ -92,7 +91,7 @@ class PowerPrices:
             raise ValueError("invalid json-format")
         con = sqlite3.connect(self.db)
         cur = con.cursor()
-        if self.check_duplicate():# True=duplicate
+        if self.check_duplicate("today"):# True=duplicate
             raise ValueError('Duplicate found, unable to add')
 
         else:
@@ -106,21 +105,13 @@ class PowerPrices:
         return True
 
     def fill_tomorrows_prices(self):
-        current_json = self.get_json()
+        current_json=self.get_json()
         if not self.json_validator(current_json):
             raise ValueError("invalid json-format")
         con = sqlite3.connect(self.db)
         cur = con.cursor()
-        if self.check_duplicate():  # True=duplicate
-            raise ValueError('Duplicate found, unable to add')
-        if len(current_json) == 192:
-            print(f"correct amount of lines!: {len(current_json)}")
-        elif len(current_json) < 192:
-            raise ValueError('less entries than expected')
-        else:
-            raise ValueError('more entries than expected')
 
-        if self.check_duplicate():  # True=duplicate
+        if self.check_duplicate("tomorrow"):  # True=duplicate
             raise ValueError('Duplicate found, unable to add')
 
         else:
@@ -158,7 +149,7 @@ SmartEnergy = PowerPrices("https://apis.smartenergy.at/tariffs/v1/Tariffs/smartT
 #print(SmartEnergy.get_today_table())
 #print(type(SmartEnergy.get_json()))
 #print(SmartEnergy.fill_todays_prices())
-#print(SmartEnergy.visualize_today())
+print(SmartEnergy.visualize_today())
 #print(SmartEnergy.fill_tomorrows_prices())
 
 
