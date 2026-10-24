@@ -2,11 +2,12 @@ import requests
 import sqlite3
 import datetime as dt
 from matplotlib import pyplot as plt
-
+import numpy as np
 
 #from matplotlib import pyplot as plt
+print(dt.tzinfo.utcoffset(2))
 
-
+#print(dt.datetime.now(dt.tzinfo("2:00")))
 class PowerPrices:
     #read api json data from the current and 1 day ahead
     def __init__(self, url:str, db:str="New.db", tbl:str="New_table", columns=None):
@@ -70,7 +71,7 @@ class PowerPrices:
 
         string = ""
         for entry in table:
-            if entry[0][0:10] == dt.date.today():
+            if entry[0][0:10] == str(dt.date.today()):
                 string+= f"date:{entry[0][0:10]}\ntime:{entry[0][11:13]}\nprice:{entry[1]}\n\n"
         if string: return string
         else: return "today data is not in table"
@@ -95,13 +96,14 @@ class PowerPrices:
             raise ValueError('Duplicate found, unable to add')
 
         else:
+
             for entry in current_json[0:int(len(current_json) / 2):4]:
                 cur.execute(f"""
                        INSERT INTO {self.tbl} VALUES
                        ('{entry['dateTimeFrom']}','{entry['value']}')
                   """)
                 con.commit()
-        print("todays prices inserted successfully")
+            print("todays prices inserted successfully")
         return True
 
     def fill_tomorrows_prices(self):
@@ -125,31 +127,47 @@ class PowerPrices:
         return True
 
     #plot basic diagram
-    def visualize_today(self, ):
+    def visualize_latest(self):
         con = sqlite3.connect(self.db)
         cur = con.cursor()
-        cur.execute(f'''SELECT * FROM {self.tbl}''')
-        table = cur.fetchall()
+        cur.execute(f'''SELECT * FROM {self.tbl} ORDER BY DateTime DESC''')
+        table = cur.fetchmany(48)
+        title = ''
         y_values = []
         for entry in table:
-            if entry[0][0:10] == dt.datetime.now().strftime("%Y-%m-%d"):
+            if entry[0][0:10] == str(dt.date.today()):
+                print(entry)
                 y_values.append(entry[1])
-        x_time = range(0,24)
-        plt.plot(x_time,y_values)
+                if not title: title = entry[0][0:10]
+        print(y_values)
+        x_time = 0.5 +np.arange(24)
+
+
         plt.title(f'prices of today {dt.datetime.now().strftime("%d.%b %Y")}')
         plt.xlabel('hour')
         plt.ylabel('cent/kWh')
 
+        fig, ax = plt.subplots()
+        fig.supxlabel(f'prices of {title}')
+        plt.bar(x_time, y_values)
+        #plot(x_time,y_values)
+        #fig.set_figure() (figsize=(1440,1080,"px"), dpi=300)
+        ax.set(xlim=(0, 24), xticks=np.arange(0, 25,1),
+               ylim=(0, 100), yticks=np.arange(0, 111,10))
+        #plt.figure().subplots(x_time, labels=x_time)
         plt.grid()
+        plt.savefig("today.pdf", format="pdf")
+
         plt.show()
+        return True
+
 
 
 SmartEnergy = PowerPrices("https://apis.smartenergy.at/tariffs/v1/Tariffs/smartTIMES/prices", "DailyPowerPricesDB.db", "powerPriceTable", ["DateTime", "Price"])
 #print(SmartEnergy.check_duplicate())
 #print(SmartEnergy.get_today_table())
-#print(type(SmartEnergy.get_json()))
+#print((SmartEnergy.get_json()))
 #print(SmartEnergy.fill_todays_prices())
-print(SmartEnergy.visualize_today())
+print(SmartEnergy.visualize_latest())
 #print(SmartEnergy.fill_tomorrows_prices())
-
 
