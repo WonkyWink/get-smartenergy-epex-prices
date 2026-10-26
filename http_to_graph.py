@@ -13,7 +13,6 @@ class HttpToGraph:
             mkdir("exports")
         except FileExistsError:
             pass
-
     def get_json(self):
 
 
@@ -23,18 +22,34 @@ class HttpToGraph:
 
 
         return raw_json
-
-
-
     def get_today_json(self):
         raw_json=self.get_json()
-        today_json = []
+        result = []
 
         for entry in raw_json:
             if str(entry["dateTimeFrom"][:10]) == str(dt.date.today()):
-                today_json.append(entry)
+                result.append(entry)
+        return result
+    def get_tomorrow_json(self):
+        raw_json=self.get_json()
+        result = []
 
-        return today_json
+        for entry in raw_json:
+            if str(entry["dateTimeFrom"][:10]) == str(dt.date.today()+dt.timedelta(days=1)):
+                result.append(entry)
+        if result: return result
+        else: raise FileNotFoundError("tomorrow data not present")
+    def get_yesterday_json(self):
+        raw_json = self.get_json()
+        result = []
+
+        for entry in raw_json:
+            if str(entry["dateTimeFrom"][:10]) == str(dt.date.today() - dt.timedelta(days=1)):
+                result.append(entry)
+        if result:
+            return result
+        else:
+            raise FileNotFoundError(f"yesterday {dt.date.today() - dt.timedelta(days=1)} data not present")
     def today_to_graph(self):
         today_json=self.get_today_json()
         date = today_json[0]["dateTimeFrom"][:10]
@@ -55,28 +70,33 @@ class HttpToGraph:
             self.times_formatted=np.array(self.times, dtype=float)
 
         for entry in today_json:
-            y_data.append(entry['value'])
+            y_data.append(entry['value']+2.988)
 
 
         x_data = self.times_formatted+0.125
         fig, ax = plt.subplots()
+        min_today=min(y_data)
+        bottom_border = ((round(min_today)//10)*10) -5
+
+
         max_today=max(y_data)
         # for future daily average:
         # avg_today=np.average((y_data))
         ax.label = date_formatted
         ax.bar(x_data,y_data,width=0.25)
-        plt.grid(axis=('both'))
+        plt.grid(axis='both')
         plt.title(f'{date}')
         plt.tight_layout()
 
 
-        ax.set(xlim=(-0.5, 24.5), xticks=(range(0,25)), ylim = (0,max_today+10),yticks = np.arange(0,max_today+10,5))
-        plt.savefig(f'exports/{filename}', dpi=300, transparent=True)
+        ax.set(xlim=(-0.5, 24.5), xticks=(range(0,25)), ylim = (bottom_border,max_today),yticks = np.arange(bottom_border ,max_today+5,5))
+        plt.savefig(f'exports/{date_formatted}.pdf', dpi=300, transparent=True)
 
         return True
 
-SmartEnergy = HttpToGraph('https://apis.smartenergy.at/tariffs/v1/Tariffs/smartTIMES/prices')
+
+SmartEnergy = HttpToGraph('https://apis.smartenergy.at/tariffs/v1/Tariffs/smartCONTROL/prices')
 #print(SmartEnergy.get_json())
 #print(SmartEnergy.get_today_json())
-print(SmartEnergy.today_to_graph())
+SmartEnergy.today_to_graph()
 
