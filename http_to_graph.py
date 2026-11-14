@@ -34,7 +34,8 @@ class HttpToGraph:
             if str(entry["dateTimeFrom"][:10]) == str(dt.date.today()+dt.timedelta(days=1)):
                 result.append(entry)
         if result: return result
-        else: raise FileNotFoundError("tomorrow data not present")
+        else: pass
+            #raise FileNotFoundError("tomorrow data not present")
 
     def today_to_graph(self):
         today_json=self.get_today_json()
@@ -79,6 +80,7 @@ class HttpToGraph:
 
     def tomorrow_to_graph(self):
         today_json = self.get_tomorrow_json()
+        if not today_json: return False
         date = today_json[0]["dateTimeFrom"][:10]
         y_data = []
         date_formatted = date[8:10] + '-' + date[5:7] + '-' + date[:4]
@@ -115,7 +117,9 @@ class HttpToGraph:
 
         ax.set(xlim=(-0.5, 24.5), xticks=(range(0, 25)), ylim=(bottom_border, max_today),
                yticks=np.arange(bottom_border, max_today + 5, 5))
+        #test the output:
         #plt.show()
+
         plt.savefig(f'exports/{filename}', dpi=300, transparent=True)
 
         return True
@@ -123,7 +127,7 @@ class HttpToGraph:
 SmartEnergy = HttpToGraph('https://apis.smartenergy.at/tariffs/v1/Tariffs/smartCONTROL/prices')
 #Remove # to choose day for graph
 
-#SmartEnergy.tomorrow_to_graph()
-#SmartEnergy.today_to_graph()
+SmartEnergy.tomorrow_to_graph()
+SmartEnergy.today_to_graph()
 
 
