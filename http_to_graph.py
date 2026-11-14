@@ -4,6 +4,9 @@ import datetime as dt
 import numpy as np
 from os import mkdir
 
+days = ["Monday", "Tuesday", "Wednesday",
+        "Thursday", "Friday", "Saturday", "Sunday"]
+
 class HttpToGraph:
     def __init__(self, api_url):
         self.api_url = api_url
@@ -40,6 +43,8 @@ class HttpToGraph:
     def today_to_graph(self):
         today_json=self.get_today_json()
         date = today_json[0]["dateTimeFrom"][:10]
+        weekday_number=dt.datetime.weekday(dt.date.fromisoformat(date))
+        weekday_str=days[weekday_number]
         y_data = []
         date_formatted = date[8:10]+'-'+date[5:7]+'-'+date[:4]
         filename = date[8:10]+'-'+date[5:7]+'-'+date[:4]+'.pdf'
@@ -70,10 +75,12 @@ class HttpToGraph:
         ax.label = date_formatted
         ax.bar(x_data,y_data,width=0.25)
         plt.grid(axis='both')
-        plt.title(f'{date}')
+        plt.title(f'{weekday_str},{date}')
         plt.tight_layout()
 
         ax.set(xlim=(-0.5, 24.5), xticks=(range(0,25)), ylim = (bottom_border,max_today),yticks = np.arange(bottom_border ,max_today+5,5))
+        #test the output:
+        #print(plt.show())
         plt.savefig(f'exports/{filename}', dpi=300, transparent=True)
 
         return True
@@ -82,6 +89,8 @@ class HttpToGraph:
         today_json = self.get_tomorrow_json()
         if not today_json: return False
         date = today_json[0]["dateTimeFrom"][:10]
+        weekday_number=dt.datetime.weekday(dt.date.fromisoformat(date))
+        weekday_str=days[weekday_number]
         y_data = []
         date_formatted = date[8:10] + '-' + date[5:7] + '-' + date[:4]
         filename = date[8:10] + '-' + date[5:7] + '-' + date[:4] + '.pdf'
@@ -112,13 +121,13 @@ class HttpToGraph:
         ax.label = date_formatted
         ax.bar(x_data, y_data, width=0.25)
         plt.grid(axis='both')
-        plt.title(f'{date}')
+        plt.title(f'{weekday_str},{date}')
         plt.tight_layout()
 
         ax.set(xlim=(-0.5, 24.5), xticks=(range(0, 25)), ylim=(bottom_border, max_today),
                yticks=np.arange(bottom_border, max_today + 5, 5))
         #test the output:
-        #plt.show()
+        #print(plt.show())
 
         plt.savefig(f'exports/{filename}', dpi=300, transparent=True)
 
@@ -126,8 +135,7 @@ class HttpToGraph:
 
 SmartEnergy = HttpToGraph('https://apis.smartenergy.at/tariffs/v1/Tariffs/smartCONTROL/prices')
 #Remove # to choose day for graph
-
-SmartEnergy.tomorrow_to_graph()
 SmartEnergy.today_to_graph()
+SmartEnergy.tomorrow_to_graph()
 
 
